@@ -33,6 +33,8 @@ int kern_init(void) {
 
     intr_enable();  // enable irq interrupt
 
+    __asm__ __volatile__("ebreak"); //breakpoint
+    __asm__ __volatile__("mret");   //Illegal instuction
     
     while (1)
         ;
