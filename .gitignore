@@ -1,3 +1,6 @@
+lab*/bin/*
+lab*/obj/*
+
 # Prerequisites
 *.d
 
