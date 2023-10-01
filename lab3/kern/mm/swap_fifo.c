@@ -39,7 +39,7 @@ _fifo_init_mm(struct mm_struct *mm)
      return 0;
 }
 /*
- * (3)_fifo_map_swappable: According FIFO PRA, we should link the most recent arrival page at the back of pra_list_head qeueue
+ * (3)_fifo_map_swappable: According FIFO PRA, we should link the most recent arrival page at the back of pra_list_head queue
  */
 static int
 _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
@@ -50,12 +50,12 @@ _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int
     assert(entry != NULL && head != NULL);
     //record the page access situlation
 
-    //(1)link the most recent arrival page at the back of the pra_list_head qeueue.
+    //(1)link the most recent arrival page at the back of the pra_list_head queue.
     list_add(head, entry);
     return 0;
 }
 /*
- *  (4)_fifo_swap_out_victim: According FIFO PRA, we should unlink the  earliest arrival page in front of pra_list_head qeueue,
+ *  (4)_fifo_swap_out_victim: According FIFO PRA, we should unlink the  earliest arrival page in front of pra_list_head queue,
  *                            then set the addr of addr of this page to ptr_page.
  */
 static int
@@ -65,7 +65,7 @@ _fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick
          assert(head != NULL);
      assert(in_tick==0);
      /* Select the victim */
-     //(1)  unlink the  earliest arrival page in front of pra_list_head qeueue
+     //(1)  unlink the  earliest arrival page in front of pra_list_head queue
      //(2)  set the addr of addr of this page to ptr_page
     list_entry_t* entry = list_prev(head);
     if (entry != head) {

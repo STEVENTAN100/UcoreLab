@@ -39,7 +39,7 @@ swap_init(void)
         panic("bad max_swap_offset %08x.\n", max_swap_offset);
      }
 
-     sm = &swap_manager_fifo;//use first in first out Page Replacement Algorithm
+     sm = &swap_manager_clock;//use first in first out Page Replacement Algorithm
      int r = sm->init();
      
      if (r == 0)
@@ -123,11 +123,11 @@ swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result)
      struct Page *result = alloc_page();
      assert(result!=NULL);
 
-     pte_t *ptep = get_pte(mm->pgdir, addr, 0);
+     pte_t *ptep = get_pte(mm->pgdir, addr, 0);//find/create pte
      // cprintf("SWAP: load ptep %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", ptep, (*ptep)>>8, addr, result, (result-pages));
     
      int r;
-     if ((r = swapfs_read((*ptep), result)) != 0)
+     if ((r = swapfs_read((*ptep), result)) != 0)//read data from disk to memory
      {
         assert(r!=0);
      }
