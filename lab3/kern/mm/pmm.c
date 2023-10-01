@@ -217,7 +217,7 @@ void pmm_init(void) {
 //  create: a logical value to decide if alloc a page for PT
 // return vaule: the kernel virtual address of this pte
 pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
-    /*
+    /* LAB2 EXERCISE 2: YOUR CODE
      *
      * If you need to visit a physical address, please use KADDR()
      * please read pmm.h for useful macros
@@ -506,6 +506,6 @@ void kfree(void *ptr, size_t n) {
     assert(ptr != NULL);
     struct Page *base = NULL;
     int num_pages = (n + PGSIZE - 1) / PGSIZE;
-    base = kva2page(ptr);
+    base = kva2page(ptr);//kernel_virtual_address_to_page
     free_pages(base, num_pages);
 }
