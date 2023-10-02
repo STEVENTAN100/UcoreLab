@@ -192,7 +192,16 @@ gdb:
     -ex 'target remote localhost:1234'
 
 	
-test: qemu
+test:
+	$(V)$(QEMU) \
+        -machine virt \
+        -nographic \
+        -bios default \
+        -device loader,file=$(UCOREIMG),addr=0x80200000\
+		-s -S &
+	riscv64-unknown-elf-gdb \
+	-x init.gdb
+
 spike: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
 	$(V)$(SPIKE) $(UCOREIMG)
 
