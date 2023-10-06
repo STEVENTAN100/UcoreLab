@@ -40,7 +40,7 @@ swap_init(void)
         panic("bad max_swap_offset %08x.\n", max_swap_offset);
      }
 
-     sm = &swap_manager_clock;//use first in first out Page Replacement Algorithm
+     sm = &swap_manager_lru;//use first in first out Page Replacement Algorithm
      int r = sm->init();
      
      if (r == 0)
@@ -135,13 +135,6 @@ swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result)
      cprintf("swap_in: load disk swap entry %d with swap_page in vadr 0x%x\n", (*ptep)>>8, addr);
      *ptr_result=result;
      return 0;
-}
-
-static inline void
-access_page(pde_t vaddr, uint8_t content)
-{
-     *(unsigned char *)vaddr = content;
-     
 }
 
 static inline void

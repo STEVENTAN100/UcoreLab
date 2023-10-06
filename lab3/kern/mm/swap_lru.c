@@ -52,12 +52,10 @@ _lru_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int 
 static int
 _lru_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)
 {
-     list_entry_t *head=(list_entry_t*) mm->sm_priv;
-         assert(head != NULL);
-     assert(in_tick==0);
+    list_entry_t *head=(list_entry_t*) mm->sm_priv;
+    assert(head != NULL);
+    assert(in_tick==0);
      /* Select the victim */
-     //(1)  unlink the  earliest arrival page in front of pra_list_head queue
-     //(2)  set the addr of addr of this page to ptr_page
     list_entry_t* entry = list_prev(head);
     if (entry != head) {
         list_del(entry);
@@ -125,7 +123,24 @@ _lru_set_unswappable(struct mm_struct *mm, uintptr_t addr)
 
 static int
 _lru_tick_event(struct mm_struct *mm)
-{ return 0; }
+{ 
+    list_entry_t *head=(list_entry_t*) mm->sm_priv;
+    assert(head != NULL);
+    list_entry_t *entry = list_next(head);
+    while(entry != head) {
+        struct Page *page = le2page(entry, pra_page_link);
+        pte_t *ptep = get_pte(mm->pgdir, page->pra_vaddr, 0);
+        if(*ptep & PTE_A) {
+            list_del(entry);
+            list_add(head, entry);
+            *ptep &= ~PTE_A;
+            tlb_invalidate(mm->pgdir, page->pra_vaddr);
+        }
+        entry = list_prev(head);
+    }
+    cprintf("_lru_tick_event is called!\n");
+    return 0;
+}
 
 
 struct swap_manager swap_manager_lru =
