@@ -9,10 +9,10 @@
 
 // process's state in his life cycle
 enum proc_state {
-    PROC_UNINIT = 0,  // uninitialized
-    PROC_SLEEPING,    // sleeping
-    PROC_RUNNABLE,    // runnable(maybe running)
-    PROC_ZOMBIE,      // almost dead, and wait parent proc to reclaim his resource
+    PROC_UNINIT = 0,  // uninitialized  -- alloc_proc
+    PROC_SLEEPING,    // sleeping       -- try_free_pages, do_wait, do_sleep
+    PROC_RUNNABLE,    // runnable(maybe running)    --proc_init, wakeup_proc
+    PROC_ZOMBIE,      // almost dead, and wait parent proc to reclaim his resource --do_exit
 };
 
 struct context {

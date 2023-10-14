@@ -86,24 +86,34 @@ static struct proc_struct *
 alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
     if (proc != NULL) {
-    //LAB4:EXERCISE1 YOUR CODE
-    /*
-     * below fields in proc_struct need to be initialized
-     *       enum proc_state state;                      // Process state
-     *       int pid;                                    // Process ID
-     *       int runs;                                   // the running times of Proces
-     *       uintptr_t kstack;                           // Process kernel stack
-     *       volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?
-     *       struct proc_struct *parent;                 // the parent process
-     *       struct mm_struct *mm;                       // Process's memory management field
-     *       struct context context;                     // Switch here to run process
-     *       struct trapframe *tf;                       // Trap frame for current interrupt
-     *       uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
-     *       uint32_t flags;                             // Process flag
-     *       char name[PROC_NAME_LEN + 1];               // Process name
-     */
-
-
+        //LAB4:EXERCISE1 2011459
+        /*
+        * below fields in proc_struct need to be initialized
+        *       enum proc_state state;                      // Process state
+        *       int pid;                                    // Process ID
+        *       int runs;                                   // the running times of Proces
+        *       uintptr_t kstack;                           // Process kernel stack
+        *       volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?
+        *       struct proc_struct *parent;                 // the parent process
+        *       struct mm_struct *mm;                       // Process's memory management field
+        *       struct context context;                     // Switch here to run process
+        *       struct trapframe *tf;                       // Trap frame for current interrupt
+        *       uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
+        *       uint32_t flags;                             // Process flag
+        *       char name[PROC_NAME_LEN + 1];               // Process name
+        */
+        proc->state = PROC_UNINIT;
+        proc->pid = -1;
+        proc->cr3 = boot_cr3;
+        proc->runs = 0;
+        proc->kstack = 0;
+        proc->need_resched = 0;
+        proc->parent = NULL;
+        proc->mm = NULL;
+        memset(&(proc->context), 0, sizeof(struct context));
+        proc->tf = NULL;
+        proc->flags = 0;
+        memset(proc->name, 0, PROC_NAME_LEN);
     }
     return proc;
 }
@@ -163,7 +173,7 @@ get_pid(void) {
 void
 proc_run(struct proc_struct *proc) {
     if (proc != current) {
-        // LAB4:EXERCISE3 YOUR CODE
+        // LAB4:EXERCISE3 2011459
         /*
         * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
         * MACROs or Functions:
@@ -172,7 +182,15 @@ proc_run(struct proc_struct *proc) {
         *   lcr3():                   Modify the value of CR3 register
         *   switch_to():              Context switching between two processes
         */
-       
+        bool intr_flag;
+        struct proc_struct *prev = current, *next = proc;
+        local_intr_save(intr_flag);
+        {
+            current = proc;
+            lcr3(next->cr3);
+            switch_to(&(prev->context), &(next->context));
+        }
+        local_intr_restore(intr_flag);
     }
 }
 
@@ -210,13 +228,13 @@ find_proc(int pid) {
 //       proc->tf in do_fork-->copy_thread function
 int
 kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
-    struct trapframe tf;
+    struct trapframe tf;    // save temp trap frame
     memset(&tf, 0, sizeof(struct trapframe));
-    tf.gpr.s0 = (uintptr_t)fn;
-    tf.gpr.s1 = (uintptr_t)arg;
+    tf.gpr.s0 = (uintptr_t)fn;  // s0 save function pointer
+    tf.gpr.s1 = (uintptr_t)arg; // s1 save arg
     tf.status = (read_csr(sstatus) | SSTATUS_SPP | SSTATUS_SPIE) & ~SSTATUS_SIE;
-    tf.epc = (uintptr_t)kernel_thread_entry;
-    return do_fork(clone_flags | CLONE_VM, 0, &tf);
+    tf.epc = (uintptr_t)kernel_thread_entry;    // entry pc point to kernel_thread_entry
+    return do_fork(clone_flags | CLONE_VM, 0, &tf); // pass tf to do_fork
 }
 
 // setup_kstack - alloc pages with size KSTACKPAGE as process kernel stack
@@ -273,7 +291,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
         goto fork_out;
     }
     ret = -E_NO_MEM;
-    //LAB4:EXERCISE2 YOUR CODE
+    //LAB4:EXERCISE2 2011459
     /*
      * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
      * MACROs or Functions:
@@ -292,14 +310,30 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
      */
 
     //    1. call alloc_proc to allocate a proc_struct
+    if((proc = alloc_proc()) == NULL)
+        goto fork_out;
     //    2. call setup_kstack to allocate a kernel stack for child process
+    proc->parent = current;
+    if(setup_kstack(proc))
+        goto bad_fork_cleanup_kstack;
     //    3. call copy_mm to dup OR share mm according clone_flag
+    if(copy_mm(clone_flags, proc))
+        goto bad_fork_cleanup_proc;
     //    4. call copy_thread to setup tf & context in proc_struct
+    copy_thread(proc, stack, tf);
     //    5. insert proc_struct into hash_list && proc_list
+    bool intr_flag;
+    local_intr_save(intr_flag);
+    {
+        proc->pid = get_pid();
+        hash_proc(proc);
+        list_add(&proc_list, &(proc->list_link));
+    }
+    local_intr_restore(intr_flag);
     //    6. call wakeup_proc to make the new child process RUNNABLE
+    wakeup_proc(proc);
     //    7. set ret vaule using child proc's pid
-
-    
+    ret = proc->pid;
 
 fork_out:
     return ret;
@@ -335,9 +369,9 @@ void
 proc_init(void) {
     int i;
 
-    list_init(&proc_list);
+    list_init(&proc_list);  // init global pcb list
     for (i = 0; i < HASH_LIST_SIZE; i ++) {
-        list_init(hash_list + i);
+        list_init(hash_list + i);   // init global pcb hash list
     }
 
     if ((idleproc = alloc_proc()) == NULL) {
@@ -371,12 +405,13 @@ proc_init(void) {
 
     current = idleproc;
 
+    // create first kernel thread, execute init_main, arg is "Hello world!!"
     int pid = kernel_thread(init_main, "Hello world!!", 0);
     if (pid <= 0) {
         panic("create init_main failed.\n");
     }
 
-    initproc = find_proc(pid);
+    initproc = find_proc(pid);  // get initproc's pcb
     set_proc_name(initproc, "init");
 
     assert(idleproc != NULL && idleproc->pid == 0);
