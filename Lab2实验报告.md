@@ -15,5 +15,5 @@
 
 通过查看 QEMU 代码中 [hw/riscv/virt.c](https://github.com/qemu/qemu/blob/master/hw/riscv/virt.c) 的 `virt_memmap[]` 的定义，可以了解到 QEMU 模拟的 RISC-V Virt 计算机的详细物理内存布局，其中VIRT_DRAM通过OpenSBI调用一些接口可以知道物理地址范围，在Qemu中通过-m指定内存大小。
 
-<img src="C:\Users\Steven Tan\AppData\Roaming\Typora\typora-user-images\1.png" alt="1" style="zoom:50%;" />
+<img src="image/lab2/1.png" width="50%" />
 
